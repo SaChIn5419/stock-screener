@@ -99,10 +99,14 @@ class StockAnalyzer:
             info = stock.info
             
             pe = info.get('trailingPE')
+            forward_pe = info.get('forwardPE')
+            ev_ebitda = info.get('enterpriseToEbitda')
             roe = info.get('returnOnEquity')
             roic = info.get('returnOnCapital') # often missing
             
             fcf = info.get('freeCashflow')
+            
+            # ... (rest of the fetching logic is fine)
             net_income = info.get('netIncomeToCommon')
             
             interest_coverage = info.get('interestCoverage')
@@ -137,6 +141,7 @@ class StockAnalyzer:
                 'Market Cap': info.get('marketCap'),
                 'P/E Ratio': pe,
                 'Forward PE': info.get('forwardPE'),
+                'EV/EBITDA': ev_ebitda,
                 'PEG Ratio': info.get('pegRatio'),
                 'Price to Book': info.get('priceToBook'),
                 'Dividend Yield': info.get('dividendYield'),
@@ -183,25 +188,44 @@ class StockAnalyzer:
         if trap_count > 0:
             print(f"Warning: Detected {trap_count} potential Value Traps (Low P/E + Neg Growth). These will be penalized.")
 
-        # 2. Z-SCORE
+        # 2. Z-SCORE NORMALIZATION (Relative Valuation)
+        # Upgrade: Prioritize EV/EBITDA > P/E Ratio
+        
+        # Create a composite 'Valuation_Metric' column
+        # If EV/EBITDA is present and positive, use it. Else use P/E.
+        # We fill NaNs with a high value (expensive) to avoid errors
+        
+        df['EV/EBITDA'] = pd.to_numeric(df['EV/EBITDA'], errors='coerce')
+        
+        # Strategy: Create a new column 'Valuation_Metric' for the Z-Score
+        df['Valuation_Metric'] = df['EV/EBITDA'].fillna(df['P/E Ratio'])
+        
+        # Cleaning: If even P/E is missing, fill with high number
+        df['Valuation_Metric'] = df['Valuation_Metric'].fillna(100)
+
         df['Industry'] = df['Industry'].fillna('Unknown')
-        industry_stats = df.groupby('Industry')['P/E Ratio'].agg(['mean', 'std', 'count'])
+        
+        # Calculate stats per industry based on this new metric
+        industry_stats = df.groupby('Industry')['Valuation_Metric'].agg(['mean', 'std', 'count'])
         
         def calculate_z(row):
             ind = row['Industry']
-            pe = row['P/E Ratio']
-            if pd.isna(pe): return 10
+            val = row['Valuation_Metric']
+            
+            if pd.isna(val): return 10
             if ind not in industry_stats.index: return 0
+            
             stats = industry_stats.loc[ind]
             if stats['count'] < 3 or pd.isna(stats['std']) or stats['std'] == 0:
-                univ_mean = df['P/E Ratio'].mean()
-                univ_std = df['P/E Ratio'].std()
+                univ_mean = df['Valuation_Metric'].mean()
+                univ_std = df['Valuation_Metric'].std()
                 if univ_std == 0: return 0
-                return (pe - univ_mean) / univ_std
-            return (pe - stats['mean']) / stats['std']
+                return (val - univ_mean) / univ_std
+            
+            return (val - stats['mean']) / stats['std']
 
-        df['PE_Z_Score'] = df.apply(calculate_z, axis=1)
-        df['Value_Rank'] = df['PE_Z_Score'].rank(ascending=True)
+        df['Valuation_Z_Score'] = df.apply(calculate_z, axis=1)
+        df['Value_Rank'] = df['Valuation_Z_Score'].rank(ascending=True)
         df['Value_Score'] = 100 - (df['Value_Rank'] / len(df) * 100)
 
         # 3. QUALITY TRIFECTA
