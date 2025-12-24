@@ -1,42 +1,83 @@
-# Automated Fundamental Analyzer
+# Quant Screener Pro 🚀
 
-This project automates the fundamental analysis of NSE stocks using Python and `yfinance`. It fetches key metrics, calculates price returns, and computes a simple "Fundamental Score" to help identify potential investment opportunities.
+An institutional-grade automated stock screener and quant analysis tool for the Indian Market (NSE). This tool combines advanced quantitative scoring, AI-powered sentiment analysis (NLP), and interactive visualizations to identify high-quality investment opportunities.
 
-## Features
-- **Concurrent Data Fetching**: Uses multi-threading to speed up data retrieval.
-- **Fundamental Scoring**: Rates stocks based on PE, ROE, Profit Margin, and Debt-to-Equity.
-- **Nifty 50 or Full NSE Support**: Choose between a quick analysis of top stocks or a full market scan.
-- **CSV Reporting**: Saves detailed results to the `reports/` directory.
+## Key Features
 
-## Prerequisite
-Ensure you have Python installed. If using Anaconda, you are good to go.
-Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+### 1. Professional Quant Model 🧠
+We moved beyond basic screening to relative valuation and quality metrics:
+-   **Z-Score Valuation**: Ranks stocks based on how cheap they are *relative to their Industry* (using **EV/EBITDA** or P/E).
+-   **Quality Trifecta**: A composite score of **ROIC** (Efficiency), **Cash Conversion** (Real Profits), and **Interest Coverage** (Safety).
+-   **Value Trap Filter**: Penalizes "cheap" stocks (Low P/E) that have shrinking earnings.
+-   **Risk-Adjusted Momentum**: Calculates momentum using a **12M - 1M** "Brake" to avoid FOMO, adjusted for annual volatility.
+
+### 2. AI Market Sentiment 📰
+-   Uses **Google News RSS** to fetch real-time headlines.
+-   Analyzes sentiment using **VADER** (Valence Aware Dictionary and sEntiment Reasoner), specifically tuned for financial text.
+-   Provides a "Market Mood" (Bullish/Bearish/Neutral) score.
+
+### 3. Institutional Data Validator 🛡️
+-   **Penny Stock Filter**: Ignores stocks < ₹5.
+-   **Liquidity Check**: Rejects stocks with zero volume for 3+ consecutive days.
+-   **Fat Finger Detection**: Filters out unrealistic price spikes (>50%).
+-   **Zombie Stock Filter**: Identifies stocks with zero volatility (flatlined) for 10+ days.
+
+### 4. Interactive Dashboard 📊
+-   Generates HTML reports using **Plotly**.
+-   **Efficient Frontier**: Risk vs Return Scatter plot.
+-   **Market Map**: Treemap weighted by Market Cap and colored by Score.
+-   **Screener Diagnostic**: Parallel coordinates plot to trace stock characteristics.
+
+### 5. Auto-Portfolio Builder 💰
+-   Automatically allocates a hypothetical budget (e.g., ₹100,000).
+-   Uses a **Score-Weighted** allocation strategy (Better stocks get more capital).
+
+---
+
+## Installation
+
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/SaChIn5419/stock-screener.git
+    cd stock-screener
+    ```
+
+2.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ## Usage
 
-### 1. Analyze Nifty 50 (Fast)
+### Run Nifty 50 Analysis (Fast)
 ```bash
 python main.py --mode nifty50
 ```
 
-### 2. Analyze All NSE Stocks (Slower)
+### Run Full Market Analysis
 ```bash
-python main.py --mode all
+python main.py --mode all --workers 20
 ```
 
-### 3. Adjust Threading
-To fetch faster (or slower to avoid rate limits), use `--workers`:
-```bash
-python main.py --mode nifty50 --workers 20
-```
+### Output
+-   **Console**: Real-time progress, Top 5 Picks, Sentiment Score, and Portfolio Allocation.
+-   **Reports (`result/`)**:
+    -   `stock_analysis_*.csv`: Full detailed dataset.
+    -   `interactive_risk_return_*.html`: Interactive Scatter Plot.
+    -   `sector_treemap_*.html`: Sector Visualization.
 
-## Output
-Results are saved in `reports/stock_analysis_[mode]_[timestamp].csv`.
-The CSV includes:
-- Price Returns (Daily, Weekly, Monthly)
-- Valuation Metrics (PE, PEG, Price to Book)
-- Financials (Revenue, Margins, EBITDA)
-- **Fundamental Score**: A simple aggregated score (0-10) to highlight strong companies.
+---
+
+## Logic & Scoring
+
+The **Final Score (0-100)** is a weighted composite of:
+1.  **Quality (40%)**: ROIC + Cash Conversion + Interest Coverage.
+2.  **Valuation (30%)**: Industry-Relative Z-Score (EV/EBITDA priority).
+3.  **Momentum (30%)**: Risk-Adjusted 11-Month Return.
+
+*Penalties are applied for Value Traps.*
+
+---
+
+## License
+MIT License. Free for educational and personal use.
