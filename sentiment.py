@@ -1,11 +1,11 @@
 import feedparser
 import pandas as pd
-from textblob import TextBlob
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import urllib.parse
 
 class MarketSentiment:
     """
-    Analyzes market sentiment using Google Finance News RSS and NLP.
+    Analyzes market sentiment using Google Finance News RSS and NLP (VADER).
     """
     
     @staticmethod
@@ -57,9 +57,10 @@ class MarketSentiment:
             
         final_df = pd.concat(all_news).drop_duplicates(subset=['Title'])
         
-        # Calculate Sentiment
+        # Calculate Sentiment using VADER (Better for finance/short text)
         # Polarity: -1 (Negative) to +1 (Positive)
-        final_df['Polarity'] = final_df['Title'].apply(lambda x: TextBlob(x).sentiment.polarity)
+        analyzer = SentimentIntensityAnalyzer()
+        final_df['Polarity'] = final_df['Title'].apply(lambda x: analyzer.polarity_scores(x)['compound'])
         
         avg_polarity = final_df['Polarity'].mean()
         
